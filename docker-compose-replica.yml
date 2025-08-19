@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: petclinic-sql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: petclinic
+      MYSQL_USER: clinicuser
+      MYSQL_PASSWORD: clinic
+    volumes:
+      - mysql-volume:/var/lib/mysql
+    networks:
+      - petclinic-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  petclinic:
+    build: .
+    ports:
+      - "0:8080"
+    networks:
+      - petclinic-network
+    depends_on:
+      - mysql
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/petclinic
+      SPRING_DATASOURCE_USERNAME: clinicuser
+      SPRING_DATASOURCE_PASSWORD: clinic
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    volumes:
+      - petclinic-volume:/app/data
+    deploy:
+      replicas: 4
+      restart_policy:
+        condition: on-failure
+
+networks:
+  petclinic-network:
+
+volumes:
+  mysql-volume:
+  petclinic-volume:
